@@ -12,11 +12,13 @@ try {
   client = new s3({
     accessKeyId: env.AWS_ACCESS_KEY_ID,
     secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-    region: env.AWS_REGION
+    endpoint: env.AWS_ENDPOINT,
+    region: env.AWS_REGION,
+    s3ForcePathStyle: true
   });
   bucket = env.S3_BUCKET;
 } catch(e) {
-
+  console.error('Error creating S3 client:', e);
 }
 
 

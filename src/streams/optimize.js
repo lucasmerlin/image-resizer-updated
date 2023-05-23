@@ -24,18 +24,13 @@ module.exports = function () {
 
     var r = sharp(image.contents);
 
-    if (env.IMAGE_PROGRESSIVE) {
-      r.progressive();
-    }
-
-    // set the output quality
-    if (image.modifiers.quality < 100) {
-      r.quality(image.modifiers.quality);
-    }
-
     // if a specific output format is specified, set it
     if (image.outputFormat) {
-      r.toFormat(image.outputFormat);
+      r.toFormat(image.outputFormat, {
+        progressive: env.IMAGE_PROGRESSIVE,
+        quality: image.modifiers.quality,
+        compressionLevel: image.modifiers.compressionLevel
+      });
     }
 
     // write out the optimised image to buffer and pass it on
