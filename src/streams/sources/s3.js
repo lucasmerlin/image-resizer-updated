@@ -1,20 +1,23 @@
 'use strict';
 
-var env, s3, stream, util, client, bucket;
+var env, stream, util, client, bucket;
 
 env    = require('../../config/environment_vars');
-s3     = require('aws-sdk').S3;
+const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
 stream = require('stream');
 util   = require('util');
 
 try {
   // create an AWS S3 client with the config data
-  client = new s3({
-    accessKeyId: env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+  client = new S3Client({
+    credentials: {
+      accessKeyId: process.env.S3_KEY,
+      secretAccessKey: process.env.S3_SECRET,
+      region: env.AWS_REGION,
+    },
     endpoint: env.AWS_ENDPOINT,
-    region: env.AWS_REGION,
-    s3ForcePathStyle: true
+    s3ForcePathStyle: true,
+    signatureVersion: 'v4',
   });
   bucket = env.S3_BUCKET;
 } catch(e) {
@@ -52,22 +55,17 @@ s3Stream.prototype._read = function(){
     Key: this.image.path.replace(/^\//,'')
   };
 
+  const command = new GetObjectCommand(awsOptions);
+
   this.image.log.time('s3');
 
-  client.getObject(awsOptions, function(err, data){
+  client.send(command).then(data => {
+    _this.image.contents = data.Body;
+    _this.image.originalContentLength = data.Body.length;
+  }).catch(err => {
+    _this.image.error = err;
+  }).finally(() => {
     _this.image.log.timeEnd('s3');
-
-    // if there is an error store it on the image object and pass it along
-    if (err) {
-      _this.image.error = err;
-    }
-
-    // if not store the image buffer
-    else {
-      _this.image.contents = data.Body;
-      _this.image.originalContentLength = data.Body.length;
-    }
-
     _this.ended = true;
     _this.push(_this.image);
     _this.push(null);
